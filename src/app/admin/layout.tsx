@@ -40,11 +40,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/admin/login');
+      // Use getUser() — validates token server-side (not just local check)
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        // Middleware handles redirect, but double-check client-side
+        if (pathname !== '/admin/login') {
+          router.push('/admin/login');
+        }
       } else {
-        setUser(session.user);
+        setUser(currentUser);
       }
       setLoading(false);
     };
@@ -53,13 +57,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         router.push('/admin/login');
-      } else if (session) {
-        setUser(session.user);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          setUser(session.user);
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [router, supabase.auth]);
+  }, [router, pathname, supabase.auth]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
