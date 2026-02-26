@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Edit, Save, X, FileText, Eye } from 'lucide-react';
+import { Plus, Edit, Save, X, FileText, Eye, Trash2, Info } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ContentBlock } from '@/types';
 
@@ -132,6 +132,15 @@ export default function AdminContentPage() {
           <Plus className="w-5 h-5" />
           Add Block
         </button>
+      </div>
+
+      {/* Info Banner */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
+        <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-400" />
+        <p>
+          <span className="font-semibold text-blue-200">Content blocks are saved to the database.</span>{' '}
+          To display them on your site pages, contact your developer. Currently, site pages use their built-in content.
+        </p>
       </div>
 
       {/* Page Tabs */}
@@ -300,6 +309,12 @@ export default function AdminContentPage() {
                       className="p-2 rounded-lg hover:bg-white/5 transition-colors"
                     >
                       <Edit className="w-4 h-4 text-[#8b8b9e]" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(block.id)}
+                      className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 text-[#8b8b9e] hover:text-red-400" />
                     </button>
                   </div>
                 </div>
