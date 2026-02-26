@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Beaker,
-  QrCode
+  QrCode,
+  BookOpen
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/admin/content', label: 'Content', icon: FileText },
   { href: '/admin/qr', label: 'QR Codes', icon: QrCode },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/guide', label: 'Guide', icon: BookOpen },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
