@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+/* Nadova Labs Design System - Tailwind v4 */
+
+@theme {
+  /* Colors */
+  --color-background: #0a0a0f;
+  --color-bg-elevated: #12121a;
+  --color-surface: #1a1a24;
+  --color-surface-light: #242432;
+  --color-foreground: #ffffff;
+  --color-muted: #8b8b9e;
+  --color-accent: #00d4aa;
+  --color-accent-glow: rgba(0, 212, 170, 0.4);
+  --color-secondary: #7c3aed;
+  --color-tertiary: #f59e0b;
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  /* Goal Colors */
+  --color-weight: #f97316;
+  --color-energy: #eab308;
+  --color-aging: #a855f7;
+  --color-sleep: #6366f1;
+  --color-recovery: #22c55e;
+  --color-muscle: #ef4444;
+  --color-gut: #14b8a6;
+  --color-immunity: #3b82f6;
+
+  /* Fonts */
+  --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-syne), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+
+  /* Animations */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Legacy CSS variables for component use */
+:root {
+  --color-bg: #0a0a0f;
+  --color-text: #ffffff;
+  --color-text-muted: #8b8b9e;
+}
+
+/* Base Styles */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-background);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-background);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-surface-light);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+
+  .text-gradient {
+    background: linear-gradient(to right, var(--color-accent), var(--color-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 9999px;
+    transition: all 0.4s var(--ease-out-expo);
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary {
+    background-color: var(--color-accent);
+    color: var(--color-background);
+    box-shadow: 0 0 40px var(--color-accent-glow);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 50px var(--color-accent-glow);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-surface);
+    color: var(--color-foreground);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-surface-light);
+    border-color: var(--color-muted);
+  }
+
+  .section {
+    padding: 96px 40px;
+    position: relative;
+  }
+
+  @media (max-width: 768px) {
+    .section {
+      padding: 80px 20px;
+    }
+  }
+
+  .noise::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+}
