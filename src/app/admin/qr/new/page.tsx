@@ -15,6 +15,7 @@ import {
   Palette,
   Hash,
   Layers,
+  FileImage,
 } from 'lucide-react';
 
 interface QrStyle {
@@ -36,6 +37,13 @@ const QR_STYLES: QrStyle[] = [
 ];
 
 type GenerationMode = 'sequential' | 'range' | 'custom';
+type QrFormat = 'png' | 'jpeg' | 'svg';
+
+const QR_FORMATS: { id: QrFormat; label: string; ext: string; desc: string }[] = [
+  { id: 'png',  label: 'PNG',  ext: 'png',  desc: 'Good for digital use' },
+  { id: 'jpeg', label: 'JPEG', ext: 'jpg',  desc: 'Smaller file size' },
+  { id: 'svg',  label: 'SVG',  ext: 'svg',  desc: 'Best for printing (vector)' },
+];
 
 export default function AdminQrNewPage() {
   const [mode, setMode] = useState<GenerationMode>('sequential');
@@ -45,6 +53,7 @@ export default function AdminQrNewPage() {
   const [customCodes, setCustomCodes] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(0);
   const [qrSize, setQrSize] = useState(512);
+  const [qrFormat, setQrFormat] = useState<QrFormat>('png');
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState<{ code: string; dataUrl: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -141,12 +150,27 @@ export default function AdminQrNewPage() {
 
       for (const code of codes) {
         const url = `${siteUrl}/${code}`;
-        const dataUrl = await QRCode.toDataURL(url, {
-          width: qrSize,
-          margin: 2,
-          color: { dark: style.dark, light: style.light },
-          errorCorrectionLevel: 'H',
-        });
+        let dataUrl: string;
+
+        if (qrFormat === 'svg') {
+          const svgString = await QRCode.toString(url, {
+            type: 'svg',
+            margin: 2,
+            color: { dark: style.dark, light: style.light },
+            errorCorrectionLevel: 'H',
+            width: qrSize,
+          });
+          dataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
+        } else {
+          dataUrl = await QRCode.toDataURL(url, {
+            width: qrSize,
+            margin: 2,
+            color: { dark: style.dark, light: style.light },
+            errorCorrectionLevel: 'H',
+            type: qrFormat === 'jpeg' ? 'image/jpeg' : 'image/png',
+          });
+        }
+
         results.push({ code, dataUrl });
       }
 
@@ -159,8 +183,9 @@ export default function AdminQrNewPage() {
   };
 
   const downloadQr = (code: string, dataUrl: string) => {
+    const ext = QR_FORMATS.find(f => f.id === qrFormat)?.ext ?? 'png';
     const link = document.createElement('a');
-    link.download = `nadova-${code}.png`;
+    link.download = `nadova-${code}.${ext}`;
     link.href = dataUrl;
     link.click();
   };
@@ -171,10 +196,15 @@ export default function AdminQrNewPage() {
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
 
+      const ext = QR_FORMATS.find(f => f.id === qrFormat)?.ext ?? 'png';
       for (const { code, dataUrl } of generated) {
-        // Convert data URL to binary
         const base64 = dataUrl.split(',')[1];
-        zip.file(`nadova-${code}.png`, base64, { base64: true });
+        if (qrFormat === 'svg') {
+          // SVG data URL is base64-encoded; decode back to text
+          zip.file(`nadova-${code}.${ext}`, atob(base64));
+        } else {
+          zip.file(`nadova-${code}.${ext}`, base64, { base64: true });
+        }
       }
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -353,7 +383,7 @@ export default function AdminQrNewPage() {
               </div>
 
               {/* Size */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 mb-5">
                 <label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Layers className="w-4 h-4 text-muted" />
                   Image Size:
@@ -371,6 +401,32 @@ export default function AdminQrNewPage() {
                     {s}px
                   </button>
                 ))}
+              </div>
+
+              {/* Format */}
+              <div className="flex items-start gap-4">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2 pt-1.5">
+                  <FileImage className="w-4 h-4 text-muted" />
+                  Format:
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {QR_FORMATS.map((fmt) => (
+                    <button
+                      key={fmt.id}
+                      onClick={() => setQrFormat(fmt.id)}
+                      className={`px-3 py-1.5 rounded-lg border text-sm transition-all text-left ${
+                        qrFormat === fmt.id
+                          ? 'border-accent bg-accent/10 text-accent'
+                          : 'border-border text-muted hover:border-accent/50'
+                      }`}
+                    >
+                      <span className="font-medium">{fmt.label}</span>
+                      <span className={`ml-2 text-xs ${qrFormat === fmt.id ? 'text-accent/70' : 'text-muted/70'}`}>
+                        {fmt.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -390,7 +446,7 @@ export default function AdminQrNewPage() {
                 <div className="text-sm text-muted space-y-1">
                   <p>Style: <span className="text-foreground">{QR_STYLES[selectedStyle].name}</span></p>
                   <p>Size: <span className="text-foreground">{qrSize}x{qrSize}px</span></p>
-                  <p>Format: <span className="text-foreground">PNG</span></p>
+                  <p>Format: <span className="text-foreground">{QR_FORMATS.find(f => f.id === qrFormat)?.label ?? 'PNG'}</span></p>
                   <p>Error correction: <span className="text-foreground">High (30%)</span></p>
                 </div>
               </div>
@@ -464,7 +520,7 @@ export default function AdminQrNewPage() {
                     className="text-xs text-muted hover:text-foreground transition-colors flex items-center gap-1"
                   >
                     <Download className="w-3 h-3" />
-                    PNG
+                    {QR_FORMATS.find(f => f.id === qrFormat)?.label ?? 'PNG'}
                   </button>
                 </div>
               ))}

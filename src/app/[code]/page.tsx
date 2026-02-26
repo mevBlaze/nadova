@@ -226,6 +226,23 @@ export default async function QrVerificationPage({
           </div>
         )}
 
+        {/* Extra / Custom Fields */}
+        {qr.extra_fields && Object.keys(qr.extra_fields).length > 0 && (
+          <div className="bg-surface rounded-xl border border-border p-6 mb-6">
+            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">
+              Additional Information
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Object.entries(qr.extra_fields).map(([key, value]) => (
+                <div key={key} className="bg-background rounded-lg border border-border p-3">
+                  <p className="text-xs text-muted uppercase tracking-wider mb-1">{key}</p>
+                  <p className="text-sm font-medium text-foreground">{String(value)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Certificate of Analysis */}
         {qr.coa_url && (
           <a

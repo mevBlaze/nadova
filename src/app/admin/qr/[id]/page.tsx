@@ -19,6 +19,8 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 
 const STATUSES: { value: QrCodeStatus; label: string; description: string }[] = [
@@ -27,6 +29,20 @@ const STATUSES: { value: QrCodeStatus; label: string; description: string }[] = 
   { value: 'expired', label: 'Expired', description: 'Shows expiry warning to customers' },
   { value: 'recalled', label: 'Recalled', description: 'Shows recall warning to customers' },
 ];
+
+interface CustomField {
+  key: string;
+  value: string;
+}
+
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <span className="text-xs font-bold tracking-widest text-muted/60 uppercase">{label}</span>
+      <div className="flex-1 h-px bg-border" />
+    </div>
+  );
+}
 
 export default function AdminQrEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +69,7 @@ export default function AdminQrEditPage() {
   const [coaUrl, setCoaUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingCoa, setUploadingCoa] = useState(false);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
   useEffect(() => {
     const fetchQr = async () => {
@@ -81,6 +98,15 @@ export default function AdminQrEditPage() {
       });
       setProductImage(data.product_image);
       setCoaUrl(data.coa_url);
+
+      // Load extra_fields — convert object to key-value array
+      const ef = data.extra_fields ?? {};
+      const fields: CustomField[] = Object.entries(ef).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
+      setCustomFields(fields);
+
       setLoading(false);
     };
     fetchQr();
@@ -124,10 +150,34 @@ export default function AdminQrEditPage() {
     setSaved(false);
   };
 
+  const addCustomField = () => {
+    setCustomFields((prev) => [...prev, { key: '', value: '' }]);
+    setSaved(false);
+  };
+
+  const updateCustomField = (index: number, field: 'key' | 'value', val: string) => {
+    setCustomFields((prev) => prev.map((f, i) => (i === index ? { ...f, [field]: val } : f)));
+    setSaved(false);
+  };
+
+  const removeCustomField = (index: number) => {
+    setCustomFields((prev) => prev.filter((_, i) => i !== index));
+    setSaved(false);
+  };
+
   const handleSave = async () => {
     if (!qr) return;
     setSaving(true);
     setError(null);
+
+    // Serialize custom fields into extra_fields object (skip blank keys)
+    const extra_fields: Record<string, string> = {};
+    for (const { key, value } of customFields) {
+      const trimmedKey = key.trim();
+      if (trimmedKey) {
+        extra_fields[trimmedKey] = value;
+      }
+    }
 
     const { error: updateError } = await supabase
       .from('qr_codes')
@@ -142,6 +192,7 @@ export default function AdminQrEditPage() {
         storage_info: form.storage_info || null,
         product_image: productImage,
         coa_url: coaUrl,
+        extra_fields: Object.keys(extra_fields).length > 0 ? extra_fields : null,
       })
       .eq('id', qr.id);
 
@@ -179,7 +230,7 @@ export default function AdminQrEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24 sm:pb-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -198,7 +249,8 @@ export default function AdminQrEditPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {qr?.status === 'active' && (
+            {/* Preview — always available */}
+            {qr && (
               <a
                 href={`/${qr.code}`}
                 target="_blank"
@@ -206,13 +258,14 @@ export default function AdminQrEditPage() {
                 className="inline-flex items-center gap-2 px-3 py-2 bg-surface border border-border rounded-lg text-muted hover:text-foreground transition-colors"
               >
                 <Eye className="w-4 h-4" />
-                Preview
+                <span className="hidden sm:inline">Preview</span>
               </a>
             )}
+            {/* Desktop save button */}
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-background font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-accent text-background font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
             >
               {saving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -264,7 +317,7 @@ export default function AdminQrEditPage() {
 
           {/* Product Info */}
           <div className="bg-surface rounded-xl border border-border p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Product Information</h2>
+            <SectionLabel label="Product Details" />
 
             <div>
               <label className="block text-sm text-muted mb-1.5">Product Name</label>
@@ -345,80 +398,170 @@ export default function AdminQrEditPage() {
             </div>
           </div>
 
-          {/* Product Image */}
-          <div className="bg-surface rounded-xl border border-border p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Product Image</h2>
-            {productImage ? (
-              <div className="relative group">
-                <img
-                  src={productImage}
-                  alt="Product"
-                  className="w-full max-w-xs rounded-xl border border-border"
-                />
-                <button
-                  onClick={() => { setProductImage(null); setSaved(false); }}
-                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/50 transition-colors">
-                {uploadingImage ? (
-                  <Loader2 className="w-8 h-8 text-muted animate-spin" />
-                ) : (
-                  <>
-                    <ImageIcon className="w-8 h-8 text-muted mb-2" />
-                    <p className="text-muted text-sm">Click to upload product image</p>
-                    <p className="text-muted/50 text-xs mt-1">PNG, JPG, WebP up to 5MB</p>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
+          {/* Media */}
+          <div className="bg-surface rounded-xl border border-border p-6 space-y-6">
+            <SectionLabel label="Media" />
+
+            {/* Product Image */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">Product Image</h2>
+              {productImage ? (
+                <div className="relative group">
+                  <img
+                    src={productImage}
+                    alt="Product"
+                    className="w-full max-w-xs rounded-xl border border-border"
+                  />
+                  <button
+                    onClick={() => { setProductImage(null); setSaved(false); }}
+                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/50 transition-colors">
+                  {uploadingImage ? (
+                    <Loader2 className="w-8 h-8 text-muted animate-spin" />
+                  ) : (
+                    <>
+                      <ImageIcon className="w-8 h-8 text-muted mb-2" />
+                      <p className="text-muted text-sm">Click to upload product image</p>
+                      <p className="text-muted/50 text-xs mt-1">PNG, JPG, WebP up to 5MB</p>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Certificate of Analysis */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">Certificate of Analysis</h2>
+              {coaUrl ? (
+                <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
+                  <FileText className="w-5 h-5 text-accent" />
+                  <a href={coaUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline text-sm flex-1 truncate">
+                    View Certificate
+                  </a>
+                  <button
+                    onClick={() => { setCoaUrl(null); setSaved(false); }}
+                    className="p-1 rounded hover:bg-surface text-muted hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/50 transition-colors">
+                  {uploadingCoa ? (
+                    <Loader2 className="w-8 h-8 text-muted animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-muted mb-2" />
+                      <p className="text-muted text-sm">Click to upload COA (PDF)</p>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleCoaUpload}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
-          {/* Certificate of Analysis */}
+          {/* Custom Fields */}
           <div className="bg-surface rounded-xl border border-border p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Certificate of Analysis</h2>
-            {coaUrl ? (
-              <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
-                <FileText className="w-5 h-5 text-accent" />
-                <a href={coaUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline text-sm flex-1 truncate">
-                  View Certificate
-                </a>
-                <button
-                  onClick={() => { setCoaUrl(null); setSaved(false); }}
-                  className="p-1 rounded hover:bg-surface text-muted hover:text-red-400 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <SectionLabel label="Custom Data" />
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Custom Fields</h2>
+                <p className="text-xs text-muted mt-0.5">Add additional key-value pairs to display on the product page</p>
+              </div>
+              <button
+                onClick={addCustomField}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm font-medium hover:bg-accent/20 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Field
+              </button>
+            </div>
+
+            {customFields.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
+                <Plus className="w-6 h-6 text-muted/50 mx-auto mb-2" />
+                <p className="text-sm text-muted">No custom fields yet</p>
+                <p className="text-xs text-muted/60 mt-1">e.g. Manufacturer, Country of Origin, Lot Size</p>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/50 transition-colors">
-                {uploadingCoa ? (
-                  <Loader2 className="w-8 h-8 text-muted animate-spin" />
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 text-muted mb-2" />
-                    <p className="text-muted text-sm">Click to upload COA (PDF)</p>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleCoaUpload}
-                  className="hidden"
-                />
-              </label>
+              <div className="space-y-2">
+                {/* Column headers */}
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-1">
+                  <span className="text-xs text-muted/60 font-medium uppercase tracking-wider">Key</span>
+                  <span className="text-xs text-muted/60 font-medium uppercase tracking-wider">Value</span>
+                  <span className="w-8" />
+                </div>
+                {customFields.map((field, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="e.g. Manufacturer"
+                      value={field.key}
+                      onChange={(e) => updateCustomField(index, 'key', e.target.value)}
+                      className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-accent transition-colors"
+                    />
+                    <input
+                      type="text"
+                      placeholder="e.g. Nadova Labs"
+                      value={field.value}
+                      onChange={(e) => updateCustomField(index, 'value', e.target.value)}
+                      className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted/40 focus:outline-none focus:border-accent transition-colors"
+                    />
+                    <button
+                      onClick={() => removeCustomField(index)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      aria-label="Remove field"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addCustomField}
+                  className="w-full mt-2 py-2 border border-dashed border-border rounded-lg text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add another field
+                </button>
+              </div>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Sticky save bar — mobile */}
+      <div className="fixed bottom-0 inset-x-0 sm:hidden bg-background/90 backdrop-blur-sm border-t border-border px-4 py-3 z-50">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-accent text-background font-semibold rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-50"
+        >
+          {saving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : saved ? (
+            <CheckCircle className="w-4 h-4" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+        </button>
       </div>
     </div>
   );
