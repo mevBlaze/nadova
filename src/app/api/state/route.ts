@@ -16,8 +16,15 @@ export async function GET() {
       qrVerification: true,
       adminPanel: true,
       scanAnalytics: true,
+      dotSigning: true,          // Ed25519 credential signing via DOT Protocol
       cmsWired: false,
       quizLive: false,
+    },
+    dotProtocol: {
+      issuer: 'nadova-labs',
+      algorithm: 'Ed25519',
+      pubkey: process.env.NEXT_PUBLIC_NADOVA_PUBKEY ?? null,
+      signingKeyConfigured: Boolean(process.env.NADOVA_SIGNING_KEY),
     },
     ts: new Date().toISOString(),
   });

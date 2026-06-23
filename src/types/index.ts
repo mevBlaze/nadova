@@ -110,6 +110,10 @@ export interface QrCode {
   extra_fields: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  // DOT-signing fields (added migration 008)
+  dot_signature: string | null;
+  dot_pubkey: string | null;
+  dot_payload: Record<string, unknown> | null;
 }
 
 export type QrCodeStatus = QrCode['status'];

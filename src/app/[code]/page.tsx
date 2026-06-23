@@ -1,8 +1,8 @@
 'use client';
 
-// /[code]/page.tsx — Premium QR verification page.
-// SSR via use-client + useEffect: next/headers approach kept for scan recording.
-// Framer Motion reveal animations run client-side after DB data loads.
+// /[code]/page.tsx — Premium dotQR verification page.
+// Fetches QR credential, verifies Ed25519 DOT-signature client-side,
+// and renders the animated verified badge with cryptographic proof.
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -11,6 +11,7 @@ import Link from 'next/link';
 import {
   Shield,
   ShieldCheck,
+  ShieldAlert,
   Calendar,
   Hash,
   Sparkles,
@@ -21,9 +22,13 @@ import {
   CheckCircle,
   Download,
   ChevronDown,
+  Key,
+  ExternalLink,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { verifyQrCredential } from '@/lib/dot-sign';
 import type { QrCode } from '@/types';
+import type { DotQrPayload, VerifyResult } from '@/lib/dot-sign';
 
 // Stagger variants for the detail cards
 const containerVariants = {
@@ -50,6 +55,10 @@ export default function QrVerificationPage() {
   const [badgeVisible, setBadgeVisible] = useState(false);
   const [stickyVisible, setStickyVisible] = useState(false);
 
+  // DOT-signature verification state
+  const [dotVerify, setDotVerify] = useState<VerifyResult | null>(null);
+  const [dotVerifying, setDotVerifying] = useState(false);
+
   useEffect(() => {
     if (!code || !/^q\d+$/i.test(code)) {
       setBadSlug(true);
@@ -72,18 +81,32 @@ export default function QrVerificationPage() {
         return;
       }
 
-      setQr(data as QrCode);
+      const qrData = data as QrCode;
+      setQr(qrData);
       setLoading(false);
 
       // Fire-and-forget scan record — never blocks the reveal
-      if (data.status !== 'draft') {
+      if (qrData.status !== 'draft') {
         const ua = navigator.userAgent.slice(0, 300);
         const ref = document.referrer.slice(0, 500);
         supabase
           .from('qr_scans')
-          .insert({ code: data.code, user_agent: ua, referrer: ref })
+          .insert({ code: qrData.code, user_agent: ua, referrer: ref })
           .then(() => {})
           .catch(() => {});
+      }
+
+      // DOT-signature verification — runs immediately after data loads
+      if (qrData.dot_signature && qrData.dot_pubkey && qrData.dot_payload) {
+        setDotVerifying(true);
+        verifyQrCredential(
+          qrData.dot_payload as unknown as DotQrPayload,
+          qrData.dot_signature,
+          qrData.dot_pubkey,
+        )
+          .then((result) => setDotVerify(result))
+          .catch(() => setDotVerify({ ok: false, reason: 'verification threw an exception' }))
+          .finally(() => setDotVerifying(false));
       }
     }
 
@@ -117,7 +140,7 @@ export default function QrVerificationPage() {
     );
   }
 
-  // --- Invalid slug (not q\d+) ---
+  // --- Invalid slug (not q\d+) or not found ---
   if (badSlug || notFound) {
     return (
       <div className="fixed inset-0 z-50 bg-[var(--color-background)] flex items-center justify-center p-6">
@@ -169,6 +192,9 @@ export default function QrVerificationPage() {
         year: 'numeric',
       })
     : null;
+
+  // Is this a DOT-signed credential?
+  const hasDotSig = Boolean(qr.dot_signature && qr.dot_pubkey);
 
   // --- Full verified / warning page ---
   return (
@@ -427,6 +453,103 @@ export default function QrVerificationPage() {
             </motion.a>
           )}
 
+          {/* ---- DOT-SIGNED CREDENTIAL CARD ---- */}
+          {hasDotSig && (
+            <motion.div
+              variants={itemVariants}
+              className={`rounded-2xl border p-5 ${
+                dotVerify?.ok === true
+                  ? 'bg-[var(--color-accent)]/5 border-[var(--color-accent)]/30'
+                  : dotVerify?.ok === false
+                  ? 'bg-red-500/5 border-red-500/25'
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)]'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {/* Icon */}
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                  dotVerify?.ok === true
+                    ? 'bg-[var(--color-accent)]/15'
+                    : dotVerify?.ok === false
+                    ? 'bg-red-500/15'
+                    : 'bg-white/5'
+                }`}>
+                  {dotVerifying ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-[var(--color-accent)] border-t-transparent animate-spin" />
+                  ) : dotVerify?.ok === true ? (
+                    <ShieldCheck className="w-5 h-5 text-[var(--color-accent)]" />
+                  ) : dotVerify?.ok === false ? (
+                    <ShieldAlert className="w-5 h-5 text-red-400" />
+                  ) : (
+                    <Key className="w-5 h-5 text-[var(--color-muted)]" />
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className={`font-semibold text-sm ${
+                    dotVerify?.ok === true
+                      ? 'text-[var(--color-accent)]'
+                      : dotVerify?.ok === false
+                      ? 'text-red-400'
+                      : 'text-white/70'
+                  }`}>
+                    {dotVerifying
+                      ? 'Verifying cryptographic signature…'
+                      : dotVerify?.ok === true
+                      ? 'Cryptographically verified — signed by Nadova Labs'
+                      : dotVerify?.ok === false
+                      ? 'Signature verification failed'
+                      : 'DOT-signed credential'}
+                  </p>
+
+                  {dotVerify?.ok === true && qr.dot_payload && (
+                    <p className="text-xs text-[var(--color-muted)] mt-1">
+                      Issued{' '}
+                      {(() => {
+                        const p = qr.dot_payload as { issuedAt?: string };
+                        return p.issuedAt
+                          ? new Date(p.issuedAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '';
+                      })()}
+                      {' '}· Ed25519
+                      {dotVerify.keySource === 'authority' ? ' · authority verified' : ' · offline verified'}
+                      {' '}· Powered by{' '}
+                      <a
+                        href="https://piedpiper.fun"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--color-accent)]/70 hover:text-[var(--color-accent)] inline-flex items-center gap-0.5"
+                      >
+                        DOT Protocol
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </p>
+                  )}
+
+                  {dotVerify?.ok === false && (
+                    <p className="text-xs text-red-400/80 mt-1">{dotVerify.reason}</p>
+                  )}
+
+                  {/* Pubkey — always show so the user can independently verify */}
+                  {qr.dot_pubkey && (
+                    <div className="mt-3 bg-black/20 rounded-lg px-3 py-2">
+                      <p className="text-[10px] text-[var(--color-muted)]/60 uppercase tracking-wider mb-0.5">
+                        Issuer public key
+                      </p>
+                      <p className="font-mono text-[10px] text-[var(--color-muted)] break-all leading-relaxed">
+                        {qr.dot_pubkey}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Footer */}
           <motion.div variants={itemVariants} className="text-center pt-4 pb-4 border-t border-[var(--color-border)]">
             <p className="text-xs text-[var(--color-muted)]/40 font-mono mb-1">{qr.code}</p>
@@ -436,6 +559,11 @@ export default function QrVerificationPage() {
                 Nadova Labs
               </Link>
             </p>
+            {hasDotSig && (
+              <p className="text-xs text-[var(--color-muted)]/40 mt-1">
+                dotQR — the first cryptographically signed peptide credential
+              </p>
+            )}
           </motion.div>
         </motion.div>
       </div>

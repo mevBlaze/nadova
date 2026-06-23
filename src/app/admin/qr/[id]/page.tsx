@@ -21,6 +21,8 @@ import {
   Loader2,
   Plus,
   Trash2,
+  ShieldCheck,
+  Key,
 } from 'lucide-react';
 
 const STATUSES: { value: QrCodeStatus; label: string; description: string }[] = [
@@ -54,6 +56,10 @@ export default function AdminQrEditPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // DOT-signing state
+  const [dotSigning, setDotSigning] = useState(false);
+  const [dotSignResult, setDotSignResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const [form, setForm] = useState({
     product_name: '',
@@ -205,6 +211,37 @@ export default function AdminQrEditPage() {
 
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  // Sign (or re-sign) this QR credential with the Nadova Ed25519 key.
+  // Calls the server-side API route — private key never touches the browser.
+  const handleDotSign = async () => {
+    if (!qr) return;
+    setDotSigning(true);
+    setDotSignResult(null);
+    try {
+      const res = await fetch('/api/sign-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: qr.id }),
+      });
+      const json = await res.json() as { ok?: boolean; signaturePrefix?: string; issuedAt?: string; error?: string };
+      if (!res.ok || !json.ok) {
+        setDotSignResult({ ok: false, message: json.error ?? 'Signing failed' });
+      } else {
+        setDotSignResult({
+          ok: true,
+          message: `Signed ${json.signaturePrefix} — issued ${json.issuedAt ? new Date(json.issuedAt).toLocaleString() : ''}`,
+        });
+        // Refresh the QR row so the DOT-signing status updates
+        const { data } = await supabase.from('qr_codes').select('*').eq('id', qr.id).single();
+        if (data) setQr(data as typeof qr);
+      }
+    } catch (e) {
+      setDotSignResult({ ok: false, message: e instanceof Error ? e.message : 'Network error' });
+    } finally {
+      setDotSigning(false);
+    }
   };
 
   if (loading) {
@@ -543,6 +580,75 @@ export default function AdminQrEditPage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ---- DOT-SIGNING SECTION ---- */}
+      <div className="mt-10">
+        <SectionLabel label="DOT Protocol — Cryptographic Signing" />
+        <div className={`rounded-2xl border p-5 ${
+          qr?.dot_signature
+            ? 'bg-accent/5 border-accent/30'
+            : 'bg-surface border-border'
+        }`}>
+          <div className="flex items-start gap-3 mb-4">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              qr?.dot_signature ? 'bg-accent/15' : 'bg-white/5'
+            }`}>
+              {qr?.dot_signature ? (
+                <ShieldCheck className="w-5 h-5 text-accent" />
+              ) : (
+                <Key className="w-5 h-5 text-muted" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-foreground">
+                {qr?.dot_signature ? 'DOT-signed credential' : 'Not yet signed'}
+              </p>
+              <p className="text-xs text-muted mt-0.5">
+                {qr?.dot_signature
+                  ? `Signed with Ed25519 — pubkey ${(qr.dot_pubkey ?? '').slice(0, 16)}…`
+                  : 'Sign this credential with the Nadova Labs Ed25519 private key to make it cryptographically unforgeable.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDotSign}
+            disabled={dotSigning}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${
+              qr?.dot_signature
+                ? 'bg-accent/10 text-accent border border-accent/25 hover:bg-accent/15'
+                : 'bg-accent text-background hover:bg-accent/90'
+            } disabled:opacity-50`}
+          >
+            {dotSigning ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                Signing…
+              </>
+            ) : qr?.dot_signature ? (
+              <>
+                <ShieldCheck className="w-4 h-4" />
+                Re-sign credential
+              </>
+            ) : (
+              <>
+                <Key className="w-4 h-4" />
+                Sign with DOT Protocol
+              </>
+            )}
+          </button>
+
+          {dotSignResult && (
+            <p className={`mt-3 text-xs px-3 py-2 rounded-lg ${
+              dotSignResult.ok
+                ? 'bg-accent/10 text-accent'
+                : 'bg-red-500/10 text-red-400'
+            }`}>
+              {dotSignResult.ok ? '' : 'Error: '}{dotSignResult.message}
+            </p>
+          )}
         </div>
       </div>
 
