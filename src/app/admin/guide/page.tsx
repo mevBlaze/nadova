@@ -25,7 +25,7 @@ const steps = [
     icon: Key,
     color: '#7c3aed',
     content: [
-      'Go to nadova.vercel.app/admin/login',
+      'Go to nadova.com/admin/login',
       'Enter your admin email and password',
       'You\'ll be taken to the Dashboard showing stats and quick actions',
     ],
@@ -116,7 +116,7 @@ const steps = [
     color: '#8b5cf6',
     content: [
       'After saving, click "Preview" to see what customers will see',
-      'Or go directly to nadova.vercel.app/q1 (replace q1 with your code)',
+      'Or go directly to nadova.com/q1 (replace q1 with your code)',
       'Scan the QR code on the bottle with your phone camera to test it',
     ],
   },
@@ -130,7 +130,7 @@ const steps = [
       'Choose how many codes to generate (5, 10, 25, or 50)',
       'New codes will be created: q101, q102, q103, etc.',
       'Download the QR code images (PNG) to print new labels',
-      'Each QR code image points to nadova.vercel.app/q{number}',
+      'Each QR code image points to nadova.com/q{number}',
     ],
   },
 ];
@@ -172,7 +172,7 @@ export default function AdminGuidePage() {
             </div>
             <div>
               <p className="font-medium text-sm">Page Opens</p>
-              <p className="text-[#8b8b9e] text-sm">nadova.vercel.app/q1 loads instantly on their phone</p>
+              <p className="text-[#8b8b9e] text-sm">nadova.com/q1 loads instantly on their phone</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -301,19 +301,19 @@ export default function AdminGuidePage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl bg-[#0a0a0f] border border-[rgba(255,255,255,0.05)]">
             <p className="text-sm font-medium text-[#8b8b9e] mb-1">Admin Panel</p>
-            <p className="font-mono text-[#00d4aa]">nadova.vercel.app/admin</p>
+            <p className="font-mono text-[#00d4aa]">nadova.com/admin</p>
           </div>
           <div className="p-4 rounded-xl bg-[#0a0a0f] border border-[rgba(255,255,255,0.05)]">
             <p className="text-sm font-medium text-[#8b8b9e] mb-1">QR Code Pages</p>
-            <p className="font-mono text-[#00d4aa]">nadova.vercel.app/q1 — /q100+</p>
+            <p className="font-mono text-[#00d4aa]">nadova.com/q1 — /q100+</p>
           </div>
           <div className="p-4 rounded-xl bg-[#0a0a0f] border border-[rgba(255,255,255,0.05)]">
             <p className="text-sm font-medium text-[#8b8b9e] mb-1">Manage QR Codes</p>
-            <p className="font-mono text-[#00d4aa]">nadova.vercel.app/admin/qr</p>
+            <p className="font-mono text-[#00d4aa]">nadova.com/admin/qr</p>
           </div>
           <div className="p-4 rounded-xl bg-[#0a0a0f] border border-[rgba(255,255,255,0.05)]">
             <p className="text-sm font-medium text-[#8b8b9e] mb-1">Generate New Codes</p>
-            <p className="font-mono text-[#00d4aa]">nadova.vercel.app/admin/qr/new</p>
+            <p className="font-mono text-[#00d4aa]">nadova.com/admin/qr/new</p>
           </div>
         </div>
       </div>

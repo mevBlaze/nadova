@@ -28,7 +28,7 @@ export default function AdminDashboard() {
           supabase.from('categories').select('id', { count: 'exact', head: true }),
           supabase.from('content_blocks').select('id', { count: 'exact', head: true }),
           supabase.from('qr_codes').select('id', { count: 'exact', head: true }),
-          supabase.from('qr_codes').select('id', { count: 'exact', head: true }).eq('is_active', true),
+          supabase.from('qr_codes').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         ]);
 
         setStats({

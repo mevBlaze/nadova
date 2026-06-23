@@ -83,6 +83,12 @@ export default function RootLayout({
           fontFamily: "var(--font-space-grotesk), system-ui, sans-serif",
         }}
       >
+        {/* Agent-legible app state — queryable via window.__APP_STATE__ */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__APP_STATE__={"app":"nadova","version":"${process.env.npm_package_version ?? '0.1.0'}","env":"${process.env.NODE_ENV}","ts":"${new Date().toISOString()}","health":"/api/health","state":"/api/state"};`,
+          }}
+        />
         <div className="noise" />
         <Header />
         <main className="flex-1">{children}</main>

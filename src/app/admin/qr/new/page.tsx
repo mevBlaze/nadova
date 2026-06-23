@@ -123,7 +123,7 @@ export default function AdminQrNewPage() {
         .select('code')
         .in('code', codes);
 
-      const existingCodes = new Set((existing || []).map(e => e.code));
+      const existingCodes = new Set((existing || []).map((e: { code: string }) => e.code));
       const newCodes = codes.filter(c => !existingCodes.has(c));
 
       if (newCodes.length === 0) {

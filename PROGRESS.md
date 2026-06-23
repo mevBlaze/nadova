@@ -17,7 +17,7 @@
 
 ### Admin Panel (`/admin`)
 - **Auth**: Supabase Auth, session persistence via middleware + singleton client
-- **Login**: nadovalabsjapan@nadova.com / andheriwest
+- **Login**: nadovalabsjapan@nadova.com / (see Supabase dashboard → Authentication → Users to reset)
 - **Password reset**: "Forgot password?" flow with email reset link
 - **Dashboard**: Stats cards (products, categories, content blocks, QR codes)
 - **QR Code Manager** (`/admin/qr`): List view with search, filter by status, stats, delete

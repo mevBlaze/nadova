@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
 
   // Redirect to /admin if already logged in
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: unknown } }) => {
       if (user) {
         router.replace('/admin');
       } else {

@@ -36,10 +36,10 @@ export default function AdminCategoriesPage() {
         .order('name');
 
       if (data) {
-        setCategories(data.map(cat => ({
+        setCategories(data.map((cat: Record<string, unknown> & { products?: unknown[] }) => ({
           ...cat,
           product_count: cat.products?.length || 0,
-        })));
+        } as Category)));
       }
     } catch (error) {
       console.error('Error fetching categories:', error);

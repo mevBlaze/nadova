@@ -15,15 +15,20 @@ import {
   X,
   Beaker,
   QrCode,
-  BookOpen
+  BookOpen,
+  FileText,
+  BarChart2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/categories', label: 'Categories', icon: FolderTree },
   { href: '/admin/qr', label: 'QR Codes', icon: QrCode },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
+  { href: '/admin/content', label: 'Content', icon: FileText },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
   { href: '/admin/guide', label: 'Guide', icon: BookOpen },
 ];
@@ -52,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (event === 'SIGNED_OUT') {
         router.push('/admin/login');
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
